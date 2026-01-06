@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerund vs Infinitive Battle</title>
+    <style>
+        /* --- DESIGN BRIEF IMPLEMENTATION --- */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
+
+        :root {
+            /* Palette [cite: 1, 2] */
+            --primary-300: #F9C97A;
+            --primary-500: #F4A329;
+            --primary-700: #B45309;
+            
+            --secondary-300: #7EDAD6;
+            --secondary-500: #2BB6B4;
+            --secondary-700: #0F766E;
+            
+            --accent-500: #E8467B;
+            --error: #D92D20;
+            --success: #2F9E44;
+            
+            --bg: #FFF7F2;
+            --surface: #FFFFFF;
+            --text: #1F2937;
+            --text-muted: #6B7280;
+            --border: #E6E9EF;
+        }
+
+        * { box-sizing: border-box; user-select: none; }
+
+        body {
+            margin: 0;
+            font-family: 'Inter', sans-serif; /* [cite: 3] */
+            background-color: var(--bg);
+            color: var(--text);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* --- UTILITY CLASSES --- */
+        .hidden { display: none !important; }
+        
+        /* Animations */
+        .shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-1px, 0, 0); }
+            20%, 80% { transform: translate3d(2px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+            40%, 60% { transform: translate3d(4px, 0, 0); }
+        }
+
+        .pop-in { animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        @keyframes popIn {
+            from { opacity: 0; transform: scale(0.8) translateY(20px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        /* --- LOBBY --- */
+        #lobby-screen {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.5rem; /* [cite: 3] */
+            color: var(--primary-700);
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.02em;
+        }
+
+        .card {
+            background: var(--surface);
+            padding: 2.5rem;
+            border-radius: 16px; /* [cite: 3] */
+            box-shadow: 0 4px 14px rgba(17,24,39,0.08); /* [cite: 3] */
+            width: 100%;
+            max-width: 500px;
+            border: 1px solid var(--border);
+        }
+
+        .input-row {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .input-group { flex: 1; text-align: left; }
+
+        label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: var(--text-muted);
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 1rem;
+            transition: border-color 0.2s;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--secondary-500); /* [cite: 3] */
+        }
+
+        /* Range Slider Styling */
+        input[type=range] {
+            width: 100%;
+            cursor: pointer;
+            accent-color: var(--primary-500);
+        }
+
+        .btn-primary {
+            background-color: var(--primary-700);
+            color: white; /* [cite: 4] */
+            border: none;
+            padding: 16px 32px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            border-radius: 9999px; /* [cite: 3] */
+            cursor: pointer;
+            width: 100%;
+            transition: filter 0.2s, transform 0.1s;
+        }
+
+        .btn-primary:hover { filter: brightness(1.1); }
+        .btn-primary:active { transform: translateY(2px); }
+
+        /* --- GAME ARENA --- */
+        #game-screen {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        /* Scoreboard */
+        .scoreboard {
+            display: flex;
+            height: 90px;
+            background: var(--surface);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            z-index: 10;
+        }
+
+        .player-score {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 2rem;
+            font-weight: 900;
+            font-size: 1.5rem;
+            transition: background-color 0.3s, color 0.3s;
+            position: relative;
+        }
+
+        .p1-box { color: var(--primary-700); border-bottom: 4px solid var(--primary-500); }
+        .p2-box { color: var(--secondary-700); border-bottom: 4px solid var(--secondary-500); flex-direction: row-reverse; }
+
+        /* Active State (Buzz) */
+        .p1-active { background-color: var(--primary-500); color: white !important; }
+        .p2-active { background-color: var(--secondary-500); color: white !important; }
+
+        .key-hint {
+            font-size: 0.75rem;
+            font-weight: 600;
+            opacity: 0.7;
+            background: rgba(0,0,0,0.05);
+            padding: 4px 8px;
+            border-radius: 6px;
+            margin-left: 8px;
+            display: inline-block;
+        }
+        .p2-box .key-hint { margin-left: 0; margin-right: 8px; }
+
+        /* Battle Area */
+        .battle-area {
+            flex: 1;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: center; /* Center vertically */
+            align-items: center;
+        }
+
+        /* Split Background */
+        .split-bg {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            z-index: 0;
+            pointer-events: none;
+        }
+        .bg-half { flex: 1; transition: opacity 0.3s; }
+        .bg-p1 { background-color: #FFFAF0; border-right: 1px solid rgba(0,0,0,0.03); }
+        .bg-p2 { background-color: #F0FDFA; }
+        
+        .dimmed { opacity: 0.3; }
+
+        /* Question Card */
+        #question-display {
+            position: relative; /* Not absolute anymore, flex centered */
+            z-index: 20;
+            background: var(--surface);
+            padding: 2rem 3rem;
+            border-radius: 24px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 900px;
+            width: 90%;
+            margin-bottom: 3rem; /* Space before buttons */
+            border: 1px solid var(--border);
+        }
+
+        .question-text {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--text);
+            margin-bottom: 0.5rem;
+            line-height: 1.3;
+        }
+
+        .question-meta {
+            font-size: 1rem;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        /* Verb Grid */
+        #verb-grid {
+            position: relative;
+            z-index: 20;
+            display: grid;
+            gap: 16px;
+            width: 90%;
+            max-width: 800px;
+            pointer-events: none; /* Locked until buzz */
+            transition: opacity 0.2s;
+            opacity: 0.5;
+        }
+
+        .verb-btn {
+            background: var(--surface);
+            border: 2px solid var(--border);
+            color: var(--text-2);
+            font-weight: 700;
+            font-size: 1.25rem;
+            padding: 1.5rem;
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 0 var(--border);
+        }
+
+        /* Unlocked State */
+        .grid-active { 
+            pointer-events: auto !important; 
+            opacity: 1 !important;
+        }
+
+        .grid-active .verb-btn:hover {
+            transform: translateY(-2px);
+            border-color: var(--text-muted);
+        }
+
+        .grid-active .verb-btn:active {
+            transform: translateY(2px);
+            box-shadow: none;
+        }
+
+        /* Feedback States */
+        .verb-btn.correct {
+            background-color: var(--success) !important;
+            color: white !important;
+            border-color: var(--success) !important;
+            box-shadow: 0 4px 0 #207E33 !important;
+        }
+
+        .verb-btn.wrong {
+            background-color: var(--error) !important;
+            color: white !important;
+            border-color: var(--error) !important;
+            box-shadow: 0 4px 0 #9E2219 !important;
+        }
+
+        /* Status Overlay */
+        #status-overlay {
+            position: absolute;
+            bottom: 5%;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 2.5rem;
+            font-weight: 900;
+            color: var(--text);
+            z-index: 30;
+            text-shadow: 0 2px 10px rgba(255,255,255,0.8);
+            white-space: nowrap;
+        }
+
+        /* Timer Bar */
+        #timer-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 8px;
+            background: var(--accent-500);
+            width: 0%;
+            z-index: 40;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="lobby-screen">
+        <h1>Verb Battle: Gerunds</h1>
+        <p style="color:var(--text-muted); margin-bottom: 2rem;">Unit 5 • -ING vs. TO...</p>
+        
+        <div class="card">
+            <div class="input-row">
+                <div class="input-group">
+                    <label style="color:var(--primary-700)">PLAYER 1 (Q)</label>
+                    <input type="text" id="p1-name" value="Player 1">
+                </div>
+                <div class="input-group">
+                    <label style="color:var(--secondary-700)">PLAYER 2 (Ú)</label>
+                    <input type="text" id="p2-name" value="Player 2">
+                </div>
+            </div>
+
+            <div class="input-group" style="margin-bottom: 2rem;">
+                <label>Difficulty: <span id="diff-display" style="color:var(--accent-500)">2</span> Options</label>
+                <input type="range" id="diff-slider" min="2" max="6" value="2" oninput="document.getElementById('diff-display').textContent = this.value">
+                <p style="font-size:0.8rem; color:var(--text-muted); margin-top:0.5rem; line-height:1.4;">
+                    <strong>Level 2:</strong> 50/50 (Reading vs To Read)<br>
+                    <strong>Level 3+:</strong> Adds random verbs (Reading, To Read, Swimming...)
+                </p>
+            </div>
+
+            <button class="btn-primary" onclick="startGame()">START BATTLE</button>
+        </div>
+    </div>
+
+    <div id="game-screen" class="hidden">
+        <div class="scoreboard">
+            <div id="p1-score-box" class="player-score p1-box">
+                <div>
+                    <span id="p1-name-display">Player 1</span>
+                    <span class="key-hint">Q</span>
+                </div>
+                <span id="p1-score">0</span>
+            </div>
+            <div id="p2-score-box" class="player-score p2-box">
+                <div>
+                    <span id="p2-name-display">Player 2</span>
+                    <span class="key-hint">Ú / P</span>
+                </div>
+                <span id="p2-score">0</span>
+            </div>
+        </div>
+
+        <div class="battle-area">
+            <div class="split-bg">
+                <div id="bg-p1" class="bg-half bg-p1"></div>
+                <div id="bg-p2" class="bg-half bg-p2"></div>
+            </div>
+
+            <div id="question-display" class="pop-in">
+                <div class="question-meta">Root Verb: <span id="root-verb">...</span></div>
+                <div class="question-text" id="sentence-text">...</div>
+            </div>
+            
+            <div id="verb-grid">
+                </div>
+
+            <div id="status-overlay"></div>
+        </div>
+        
+        <div id="timer-bar"></div>
+    </div>
+
+    <script>
+        // --- 1. AUDIO ENGINE ---
+        let audioCtx;
+        function initAudio() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+        }
+
+        function playTone(freq, type, duration) {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+        }
+
+        const SFX = {
+            buzz: () => { playTone(300, 'sawtooth', 0.1); setTimeout(() => playTone(500, 'sawtooth', 0.2), 50); },
+            correct: () => { playTone(600, 'sine', 0.1); setTimeout(() => playTone(900, 'sine', 0.3), 100); },
+            wrong: () => { playTone(150, 'sawtooth', 0.4); }
+        };
+
+        // --- 2. DATABASE (B1/B2 Gerunds & Infinitives) ---
+        const DATABASE = [
+            // GERUNDS
+            { sentence: "I enjoy ___ fantasy books.", root: "read", type: "gerund" },
+            { sentence: "Please avoid ___ noise.", root: "make", type: "gerund" },
+            { sentence: "Do you mind ___ the window?", root: "open", type: "gerund" },
+            { sentence: "He finished ___ his room.", root: "clean", type: "gerund" },
+            { sentence: "I suggest ___ a taxi.", root: "take", type: "gerund" },
+            { sentence: "She practices ___ piano daily.", root: "play", type: "gerund" },
+            { sentence: "I miss ___ in Spain.", root: "live", type: "gerund" },
+            { sentence: "Keep ___ until you succeed!", root: "try", type: "gerund" },
+            { sentence: "He gave up ___ last year.", root: "smoke", type: "gerund" },
+            { sentence: "I'm interested in ___ art.", root: "learn", type: "gerund" },
+            { sentence: "She is good at ___.", root: "draw", type: "gerund" },
+            { sentence: "We spend time ___ TV.", root: "watch", type: "gerund" },
+            { sentence: "I look forward to ___ you.", root: "see", type: "gerund" }, // Tricky
+
+            // INFINITIVES
+            { sentence: "She decided ___ to the party.", root: "go", type: "infinitive" },
+            { sentence: "I promise ___ you later.", root: "help", type: "infinitive" },
+            { sentence: "We hope ___ the match.", root: "win", type: "infinitive" },
+            { sentence: "They offered ___ for dinner.", root: "pay", type: "infinitive" },
+            { sentence: "He plans ___ a business.", root: "start", type: "infinitive" },
+            { sentence: "I want ___ a new car.", root: "buy", type: "infinitive" },
+            { sentence: "She refused ___ the meat.", root: "eat", type: "infinitive" },
+            { sentence: "They agreed ___ at 5 PM.", root: "meet", type: "infinitive" },
+            { sentence: "We can't afford ___ here.", root: "stay", type: "infinitive" },
+            { sentence: "He pretends ___ rich.", root: "be", type: "infinitive" },
+            { sentence: "I need ___ more.", root: "sleep", type: "infinitive" },
+            { sentence: "She learned ___ at age 5.", root: "swim", type: "infinitive" }
+        ];
+
+        // Helper: Simple Conjugator (Basic Rules)
+        function conjugate(verb, form) {
+            if (form === 'infinitive') return "to " + verb;
+            
+            // Gerund Logic
+            // Exceptions
+            if (verb === 'be') return 'being';
+            if (verb === 'see') return 'seeing';
+            
+            const lastChar = verb.slice(-1);
+            const secondLast = verb.slice(-2, -1);
+            const vowels = "aeiou";
+            
+            // CVC doubling (simple heuristic for this specific list)
+            const cvcVerbs = ['win', 'swim', 'run', 'sit', 'get', 'shop'];
+            if (cvcVerbs.includes(verb)) {
+                return verb + lastChar + "ing";
+            }
+            
+            // Silent 'e' drop (make -> making)
+            if (lastChar === 'e' && !['e','o','y'].includes(secondLast)) {
+                return verb.slice(0, -1) + "ing";
+            }
+
+            return verb + "ing";
+        }
+
+        // --- 3. STATE MANAGEMENT ---
+        let state = {
+            p1: { name: "P1", score: 0 },
+            p2: { name: "P2", score: 0 },
+            difficulty: 2,
+            currentRound: null,
+            timer: null,
+            phase: 'lobby', // lobby, idle, buzzed, cooldown
+            activePlayer: null
+        };
+
+        const els = {
+            lobby: document.getElementById('lobby-screen'),
+            game: document.getElementById('game-screen'),
+            p1Score: document.getElementById('p1-score'),
+            p2Score: document.getElementById('p2-score'),
+            p1Name: document.getElementById('p1-name-display'),
+            p2Name: document.getElementById('p2-name-display'),
+            p1Box: document.getElementById('p1-score-box'),
+            p2Box: document.getElementById('p2-score-box'),
+            bg1: document.getElementById('bg-p1'),
+            bg2: document.getElementById('bg-p2'),
+            question: document.getElementById('sentence-text'),
+            rootDisplay: document.getElementById('root-verb'),
+            grid: document.getElementById('verb-grid'),
+            overlay: document.getElementById('status-overlay'),
+            timer: document.getElementById('timer-bar')
+        };
+
+        function startGame() {
+            initAudio();
+            state.p1.name = document.getElementById('p1-name').value;
+            state.p2.name = document.getElementById('p2-name').value;
+            state.difficulty = parseInt(document.getElementById('diff-slider').value);
+
+            els.p1Name.textContent = state.p1.name;
+            els.p2Name.textContent = state.p2.name;
+            
+            els.lobby.classList.add('hidden');
+            els.game.classList.remove('hidden');
+            
+            document.addEventListener('keydown', handleInput);
+            nextRound();
+        }
+
+        function nextRound() {
+            state.phase = 'idle';
+            resetUI();
+
+            // 1. Pick Question
+            const item = DATABASE[Math.floor(Math.random() * DATABASE.length)];
+            state.currentRound = item;
+            
+            // 2. Generate Options based on Logic
+            let options = [];
+            
+            // Always include Correct Answer
+            const correctAnswer = conjugate(item.root, item.type);
+            options.push({ text: correctAnswer, correct: true });
+
+            // Always include The "Wrong Form" (Distractor #1)
+            const wrongType = item.type === 'gerund' ? 'infinitive' : 'gerund';
+            options.push({ text: conjugate(item.root, wrongType), correct: false });
+
+            // If Difficulty > 2: Add random distractions
+            if (state.difficulty > 2) {
+                let needed = state.difficulty - 2;
+                let potentialDistractors = DATABASE
+                    .filter(d => d.root !== item.root) // Don't repeat current verb
+                    .sort(() => 0.5 - Math.random()); // Shuffle
+
+                for (let i = 0; i < needed; i++) {
+                    if (potentialDistractors[i]) {
+                        const r = potentialDistractors[i];
+                        // Randomly choose gerund or inf form for the distractor
+                        const form = Math.random() > 0.5 ? 'gerund' : 'infinitive';
+                        options.push({ text: conjugate(r.root, form), correct: false });
+                    }
+                }
+            }
+
+            // Shuffle Options
+            options.sort(() => 0.5 - Math.random());
+
+            // 3. Render
+            els.question.textContent = item.sentence.replace('___', '______');
+            els.rootDisplay.textContent = item.root.toUpperCase();
+            
+            // Pop Animation
+            const card = document.getElementById('question-display');
+            card.classList.remove('pop-in');
+            void card.offsetWidth;
+            card.classList.add('pop-in');
+
+            els.overlay.textContent = "BUZZ TO ANSWER!";
+            els.overlay.style.color = "var(--text-muted)";
+            els.overlay.style.fontSize = "1.5rem";
+
+            renderButtons(options);
+        }
+
+        function renderButtons(options) {
+            els.grid.innerHTML = '';
+            
+            // Layout Logic
+            if(options.length <= 2) els.grid.style.gridTemplateColumns = "1fr 1fr";
+            else els.grid.style.gridTemplateColumns = "1fr 1fr"; // Keep 2 cols for cleaner look
+
+            options.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = 'verb-btn';
+                btn.textContent = opt.text;
+                btn.onclick = () => submitAnswer(opt.correct, btn);
+                els.grid.appendChild(btn);
+            });
+        }
+
+        // --- 4. GAMEPLAY LOGIC ---
+        function handleInput(e) {
+            if (state.phase !== 'idle') return;
+            
+            const key = e.key.toLowerCase();
+            
+            if (key === 'q') triggerBuzz('p1');
+            else if (key === 'ú' || key === 'p' || key === 'bracketright') triggerBuzz('p2');
+        }
+
+        function triggerBuzz(player) {
+            state.phase = 'buzzed';
+            state.activePlayer = player;
+            SFX.buzz();
+
+            // UI Updates
+            const name = player === 'p1' ? state.p1.name : state.p2.name;
+            els.overlay.textContent = `${name} CHOOSING...`;
+            els.overlay.style.color = "var(--text)";
+            els.overlay.style.fontSize = "2.5rem";
+
+            if (player === 'p1') {
+                els.p1Box.classList.add('p1-active');
+                els.bg2.classList.add('dimmed');
+            } else {
+                els.p2Box.classList.add('p2-active');
+                els.bg1.classList.add('dimmed');
+            }
+
+            els.grid.classList.add('grid-active');
+
+            // Timer
+            els.timer.style.transition = 'width 3s linear';
+            els.timer.style.width = '100%';
+            
+            state.timer = setTimeout(() => {
+                submitAnswer(false, null); // Time out
+            }, 3000);
+        }
+
+        function submitAnswer(isCorrect, btn) {
+            clearTimeout(state.timer);
+            state.phase = 'cooldown';
+            els.grid.classList.remove('grid-active');
+
+            // Feedback Visuals
+            if (btn) btn.classList.add(isCorrect ? 'correct' : 'wrong');
+
+            if (isCorrect) {
+                SFX.correct();
+                if (state.activePlayer === 'p1') state.p1.score++;
+                else state.p2.score++;
+                els.overlay.textContent = "CORRECT!";
+                els.overlay.style.color = "var(--success)";
+            } else {
+                SFX.wrong();
+                // Screen Shake
+                els.game.classList.add('shake');
+                setTimeout(() => els.game.classList.remove('shake'), 500);
+
+                if (state.activePlayer === 'p1') state.p1.score--;
+                else state.p2.score--;
+                
+                const correctText = conjugate(state.currentRound.root, state.currentRound.type);
+                els.overlay.innerHTML = `WRONG!<br><span style="font-size:1.5rem">Answer: ${correctText}</span>`;
+                els.overlay.style.color = "var(--error)";
+            }
+
+            updateScores();
+
+            // Next round delay
+            setTimeout(nextRound, 2000);
+        }
+
+        function updateScores() {
+            els.p1Score.textContent = state.p1.score;
+            els.p2Score.textContent = state.p2.score;
+        }
+
+        function resetUI() {
+            els.p1Box.classList.remove('p1-active');
+            els.p2Box.classList.remove('p2-active');
+            els.bg1.classList.remove('dimmed');
+            els.bg2.classList.remove('dimmed');
+            
+            els.timer.style.transition = 'none';
+            els.timer.style.width = '0%';
+            
+            els.overlay.textContent = "";
+        }
+    </script>
+</body>
+</html>
