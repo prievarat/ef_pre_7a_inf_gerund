@@ -142,7 +142,7 @@
 
         .scoreboard {
             display: flex;
-            height: 90px;
+            height: 80px;
             background: var(--surface);
             box-shadow: 0 4px 10px rgba(0,0,0,0.05);
             z-index: 10;
@@ -185,6 +185,7 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
+            padding: 1rem;
         }
 
         .split-bg {
@@ -203,13 +204,13 @@
             position: relative;
             z-index: 20;
             background: var(--surface);
-            padding: 2rem 3rem;
+            padding: 1.5rem 2rem;
             border-radius: 24px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.1);
             text-align: center;
             max-width: 900px;
             width: 90%;
-            margin-bottom: 2rem;
+            margin-bottom: 1.5rem;
             border: 1px solid var(--border);
         }
 
@@ -217,23 +218,16 @@
             font-size: 2rem;
             font-weight: 800;
             color: var(--text);
-            margin-bottom: 0.5rem;
             line-height: 1.3;
-        }
-
-        .question-meta {
-            font-size: 1rem;
-            color: var(--text-muted);
-            font-weight: 600;
         }
 
         #verb-grid {
             position: relative;
             z-index: 20;
             display: grid;
-            gap: 16px;
-            width: 90%;
-            max-width: 800px;
+            gap: 12px;
+            width: 95%;
+            max-width: 1000px;
             pointer-events: none;
             transition: opacity 0.2s;
             opacity: 0.5;
@@ -244,12 +238,13 @@
             border: 2px solid var(--border);
             color: var(--text);
             font-weight: 700;
-            font-size: 1.25rem;
-            padding: 1.5rem;
-            border-radius: 16px;
+            font-size: 1.1rem;
+            padding: 1rem;
+            border-radius: 12px;
             cursor: pointer;
             transition: all 0.2s;
-            box-shadow: 0 4px 0 var(--border);
+            box-shadow: 0 3px 0 var(--border);
+            text-transform: lowercase;
         }
 
         .grid-active { 
@@ -266,14 +261,14 @@
             background-color: var(--success) !important;
             color: white !important;
             border-color: var(--success) !important;
-            box-shadow: 0 4px 0 #207E33 !important;
+            box-shadow: 0 3px 0 #207E33 !important;
         }
 
         .verb-btn.wrong {
             background-color: var(--error) !important;
             color: white !important;
             border-color: var(--error) !important;
-            box-shadow: 0 4px 0 #9E2219 !important;
+            box-shadow: 0 3px 0 #9E2219 !important;
         }
 
         #timer-bar {
@@ -292,7 +287,7 @@
 
     <div id="lobby-screen">
         <h1>Verb Battle: Gerunds</h1>
-        <p style="color:var(--text-muted); margin-bottom: 2rem;">Unit 5 • -ING vs. TO...</p>
+        <p style="color:var(--text-muted); margin-bottom: 2rem;">Choose the correct verb form to win!</p>
         
         <div class="card">
             <div class="input-row">
@@ -308,7 +303,7 @@
 
             <div class="input-group" style="margin-bottom: 2rem;">
                 <label>Difficulty: <span id="diff-display" style="color:var(--accent-500)">2</span> Options</label>
-                <input type="range" id="diff-slider" min="2" max="6" value="2" oninput="document.getElementById('diff-display').textContent = this.value">
+                <input type="range" id="diff-slider" min="2" max="12" value="2" oninput="document.getElementById('diff-display').textContent = this.value">
             </div>
 
             <button class="btn-primary" onclick="startGame()">START BATTLE</button>
@@ -340,7 +335,6 @@
             </div>
 
             <div id="question-display">
-                <div class="question-meta">Root Verb: <span id="root-verb">...</span></div>
                 <div class="question-text" id="sentence-text">...</div>
             </div>
             
@@ -439,7 +433,6 @@
             bg1: document.getElementById('bg-p1'),
             bg2: document.getElementById('bg-p2'),
             question: document.getElementById('sentence-text'),
-            rootDisplay: document.getElementById('root-verb'),
             grid: document.getElementById('verb-grid'),
             timer: document.getElementById('timer-bar')
         };
@@ -462,14 +455,21 @@
             resetUI();
             const item = DATABASE[Math.floor(Math.random() * DATABASE.length)];
             state.currentRound = item;
+            
             let options = [];
             const correctAnswer = conjugate(item.root, item.type);
             options.push({ text: correctAnswer, correct: true });
+            
+            // Generate distractors
             const wrongType = item.type === 'gerund' ? 'infinitive' : 'gerund';
             options.push({ text: conjugate(item.root, wrongType), correct: false });
+            
             if (state.difficulty > 2) {
                 let needed = state.difficulty - 2;
-                let potentialDistractors = DATABASE.filter(d => d.root !== item.root).sort(() => 0.5 - Math.random());
+                let potentialDistractors = [...DATABASE]
+                    .filter(d => d.root !== item.root)
+                    .sort(() => 0.5 - Math.random());
+                
                 for (let i = 0; i < needed; i++) {
                     if (potentialDistractors[i]) {
                         const r = potentialDistractors[i];
@@ -478,9 +478,10 @@
                     }
                 }
             }
+            
             options.sort(() => 0.5 - Math.random());
             els.question.textContent = item.sentence.replace('___', '______');
-            els.rootDisplay.textContent = item.root.toUpperCase();
+            
             const card = document.getElementById('question-display');
             card.classList.remove('pop-in');
             void card.offsetWidth;
@@ -490,7 +491,9 @@
 
         function renderButtons(options) {
             els.grid.innerHTML = '';
-            els.grid.style.gridTemplateColumns = "1fr 1fr";
+            // Switch to 3 columns if difficulty is high
+            els.grid.style.gridTemplateColumns = state.difficulty > 6 ? "1fr 1fr 1fr" : "1fr 1fr";
+            
             options.forEach(opt => {
                 const btn = document.createElement('button');
                 btn.className = 'verb-btn';
